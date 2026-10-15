@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Chord Explorer">
+<title>Chord Explorer</title>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;900&family=Work+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+    /* ── Global ─────────────────────────────────────────────────────── */
+    :root {
+        --paper: #f1ead9;
+        --paper-dark: #e8dfca;
+        --ink: #171512;
+        --ink-light: #3a3226;
+        --ink-muted: #6e6656;
+        --border: #b3a68e;
+        --amber: #c4531c;
+        --red: #8b2020;
+        --blue: #1a3060;
+        --green: #3c6b4a;
+        --font-display: 'Big Shoulders Display', sans-serif;
+        --font-body: 'Work Sans', sans-serif;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+        font-family: var(--font-body);
+        background: var(--paper);
+        color: var(--ink);
+        min-height: 100vh;
+    }
+
+    #app {
+        padding: 1.5rem 1rem 3rem;
+        max-width: 900px;
+        margin: 0 auto;
+        background:
+            radial-gradient(ellipse at 80% 15%, rgba(26,48,96,0.06) 0%, transparent 50%),
+            radial-gradient(ellipse at 20% 85%, rgba(60,107,74,0.05) 0%, transparent 50%),
+            var(--paper);
+        min-height: 100vh;
+    }
+
+    .tool-header {
+        text-align: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 3px solid var(--ink);
+    }
+    .tool-header h1 {
+        font-family: var(--font-display);
+        font-size: 2.4rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.005em;
+        line-height: 0.95;
+    }
+    .tool-header p {
+        font-size: 0.8rem;
+        font-style: italic;
+        color: var(--ink-muted);
+        margin-top: 0.3rem;
+    }
+
+    .card {
+        border: 2px solid var(--ink);
+        border-radius: 0;
+        padding: 1.2rem 1rem;
+        margin-bottom: 1.2rem;
+    }
+    .control-group { margin-bottom: 1.2rem; }
+    .control-group:last-child { margin-bottom: 0; }
+
+    label.section-label {
+        display: block;
+        font-size: 0.68rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--amber);
+        margin-bottom: 0.5rem;
+    }
+
+    /* ── Button grids (root, quality, voicing, string set) ──────────── */
+    .note-grid {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 0.4rem;
+    }
+    .seg-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+        gap: 0.4rem;
+    }
+    .seg-grid + .seg-grid { margin-top: 0.4rem; }
+    .note-btn {
+        padding: 0.5rem 0.2rem;
+        background: none;
+        border: 1px solid var(--border);
+        border-radius: 0;
+        font-family: var(--font-body);
+        font-size: 0.8rem;
+        color: var(--ink-light);
+        cursor: pointer;
+        transition: all 0.12s;
+    }
+    .note-btn:hover { background: var(--paper-dark); border-color: var(--ink); }
+    .note-btn.active {
+        background: var(--ink);
+        color: var(--paper);
+        border-color: var(--ink);
+        font-weight: 700;
+    }
+
+    /* ── Toggles ────────────────────────────────────────────────────── */
+    .toggle-row { display: flex; flex-direction: column; gap: 0.55rem; }
+    .toggle-row label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.8rem;
+        color: var(--ink-light);
+        cursor: pointer;
+    }
+    .toggle-row input[type="checkbox"] {
+        width: 15px;
+        height: 15px;
+        accent-color: var(--amber);
+        cursor: pointer;
+    }
+
+    /* ── Chord title display ───────────────────────────────────────── */
+    .chord-display {
+        border: 2px solid var(--ink);
+        border-radius: 0;
+        padding: 1.4rem 1rem;
+        text-align: center;
+        margin-bottom: 1.2rem;
+    }
+    .chord-title {
+        font-family: var(--font-display);
+        font-size: 2.6rem;
+        font-weight: 900;
+        letter-spacing: 0.005em;
+        color: var(--ink);
+        line-height: 1;
+        margin-bottom: 0.35rem;
+    }
+    .chord-sub {
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--amber);
+        margin-bottom: 0.5rem;
+    }
+    .chord-notes {
+        font-size: 0.78rem;
+        color: var(--ink-muted);
+        letter-spacing: 0.04em;
+    }
+    .chord-notes .root-note { color: var(--amber); font-weight: 700; }
+
+    /* ── Shape diagrams ─────────────────────────────────────────────── */
+    .shapes {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 0.8rem;
+        margin-bottom: 0.5rem;
+    }
+    .shape {
+        background: none;
+        border: 1px solid var(--border);
+        border-radius: 0;
+        padding: 0.7rem 0.4rem 0.5rem;
+        cursor: pointer;
+        font-family: var(--font-body);
+        color: var(--ink);
+        transition: all 0.12s;
+        text-align: center;
+    }
+    .shape:hover { border-color: var(--ink); background: var(--paper-dark); }
+    .shape.active { border: 2px solid var(--ink); padding: calc(0.7rem - 1px) calc(0.4rem - 1px) calc(0.5rem - 1px); }
+    .shape-name {
+        font-size: 0.66rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--ink-light);
+        margin-bottom: 0.3rem;
+    }
+    .shape.active .shape-name { color: var(--amber); }
+    .shape svg { display: block; margin: 0 auto; }
+    .shape svg text { font-family: var(--font-body); }
+    .shape-tones {
+        font-size: 0.68rem;
+        color: var(--ink-muted);
+        margin-top: 0.25rem;
+        letter-spacing: 0.04em;
+    }
+    .hint {
+        font-size: 0.68rem;
+        font-style: italic;
+        color: var(--ink-muted);
+        text-align: center;
+    }
+
+    /* ── Fretboard ──────────────────────────────────────────────────── */
+    .fretboard-wrap {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 0.2rem;
+    }
+    #fretboard { display: block; }
+    #fretboard text { font-family: var(--font-body); }
+
+    .legend {
+        display: flex;
+        gap: 1.4rem;
+        justify-content: center;
+        font-size: 0.72rem;
+        color: var(--ink-muted);
+        flex-wrap: wrap;
+    }
+    .legend-item { display: flex; align-items: center; gap: 0.4rem; }
+    .legend-dot {
+        width: 14px; height: 14px;
+        border-radius: 50%;
+        border: 1.4px solid var(--ink);
+        display: inline-block;
+    }
+    .legend-dot.root { background: var(--amber); }
+    .legend-dot.tone { background: var(--paper); }
+    .legend-dot.ghost { border: 1.2px dashed var(--border); background: none; }
+</style>
+</head>
+<body>
+<div id="app">
+    <div class="tool-header">
+        <h1>Chord Explorer</h1>
+        <p>every voicing, every inversion, anywhere on the neck</p>
+    </div>
+
+    <div class="card">
+        <div class="control-group">
+            <label class="section-label">Root</label>
+            <div class="note-grid" id="noteGrid"></div>
+        </div>
+        <div class="control-group">
+            <label class="section-label">Quality</label>
+            <div class="seg-grid" id="qualitySevenths"></div>
+            <div class="seg-grid" id="qualityTriads"></div>
+        </div>
+        <div class="control-group">
+            <label class="section-label">Voicing</label>
+            <div class="seg-grid" id="familyGrid"></div>
+        </div>
+        <div class="control-group">
+            <label class="section-label">Strings</label>
+            <div class="seg-grid" id="setGrid"></div>
+        </div>
+        <div class="control-group toggle-row">
+            <label><input type="checkbox" id="showDegrees" checked> Show chord degrees instead of note names</label>
+            <label><input type="checkbox" id="useFlats" checked> Use flats (&#9837;) instead of sharps (&#9839;)</label>
+        </div>
+    </div>
+
+    <div class="chord-display">
+        <div class="chord-title" id="chordTitle">Cmaj7</div>
+        <div class="chord-sub" id="chordSub"></div>
+        <div class="chord-notes" id="chordNotes"></div>
+    </div>
+
+    <div class="shapes" id="shapes"></div>
+    <p class="hint" style="margin-bottom:1.2rem;">Tap a shape to hear it.</p>
+
+    <div class="card">
+        <div class="fretboard-wrap">
+            <svg id="fretboard" xmlns="http://www.w3.org/2000/svg"></svg>
+        </div>
+    </div>
+
+    <div class="legend">
+        <div class="legend-item"><span class="legend-dot root"></span> Root</div>
+        <div class="legend-item"><span class="legend-dot tone"></span> Selected shape</div>
+        <div class="legend-item"><span class="legend-dot ghost"></span> Other shapes</div>
+    </div>
+    <p class="hint" style="margin-top:1.6rem;">Jazz guitar samples from the FatBoy soundfont via <a href="https://github.com/gleitz/midi-js-soundfonts" target="_blank" rel="noopener" style="color: inherit;">midi-js-soundfonts</a>, licensed <a href="https://creativecommons.org/licenses/by-sa/3.0/" target="_blank" rel="noopener" style="color: inherit;">CC BY-SA 3.0</a>.</p>
+</div>
+
+<script>
+    // ── Note data ──────────────────────────────────────────────────────────
+    const NOTE_SHARP = ['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
+    const NOTE_FLAT  = ['C','D♭','D','E♭','E','F','G♭','G','A♭','A','B♭','B'];
+    const LETTER_PC  = { C:0, D:2, E:4, F:5, G:7, A:9, B:11 };
+
+    // ── Chord qualities ──────────────────────────────────────────────────
+    // Tones are listed R, 3rd, 5th, 7th (or 6th) so voicing formulas below can
+    // address them by index regardless of quality.
+    const QUALITIES = {
+        maj7:  { sym: 'maj7', label: 'maj7',  tones: [0,4,7,11], degrees: ['1','3','5','7'] },
+        dom7:  { sym: '7',    label: '7',     tones: [0,4,7,10], degrees: ['1','3','5','♭7'] },
+        min7:  { sym: 'm7',   label: 'm7',    tones: [0,3,7,10], degrees: ['1','♭3','5','♭7'] },
+        m7b5:  { sym: 'm7♭5', label: 'm7♭5',  tones: [0,3,6,10], degrees: ['1','♭3','♭5','♭7'] },
+        dim7:  { sym: '°7',   label: '°7',    tones: [0,3,6,9],  degrees: ['1','♭3','♭5','𝄫7'] },
+        mMaj7: { sym: 'm(maj7)', label: 'm(maj7)', tones: [0,3,7,11], degrees: ['1','♭3','5','7'] },
+        maj6:  { sym: '6',    label: '6',     tones: [0,4,7,9],  degrees: ['1','3','5','6'] },
+        min6:  { sym: 'm6',   label: 'm6',    tones: [0,3,7,9],  degrees: ['1','♭3','5','6'] },
+        sus7:  { sym: '7sus4', label: '7sus4', tones: [0,5,7,10], degrees: ['1','4','5','♭7'] },
+        maj:   { sym: '',     label: 'major', tones: [0,4,7],    degrees: ['1','3','5'] },
+        min:   { sym: 'm',    label: 'minor', tones: [0,3,7],    degrees: ['1','♭3','5'] },
+        dim:   { sym: '°',    label: 'dim',   tones: [0,3,6],    degrees: ['1','♭3','♭5'] },
+        aug:   { sym: '+',    label: 'aug',   tones: [0,4,8],    degrees: ['1','3','♯5'] },
+        sus4:  { sym: 'sus4', label: 'sus4',  tones: [0,5,7],    degrees: ['1','4','5'] },
+    };
+    const SEVENTH_KEYS = ['maj7','dom7','min7','m7b5','dim7','mMaj7','maj6','min6','sus7'];
+    const TRIAD_KEYS   = ['maj','min','dim','aug','sus4'];
+
+    // ── Standard tuning, low to high (index 0 = low E) ────────────────────
+    const OPEN_MIDI = [40, 45, 50, 55, 59, 64];
+    const STRING_NAMES = ['E','A','D','G','B','e'];
+
+    // ── Voicing families ─────────────────────────────────────────────────
+    // Each family lists string sets (strings low→high) and, per shape, the
+    // chord-tone index on each string low→high. `b` is the bass tone index.
+    const mod = (n, m) => ((n % m) + m) % m;
+    const FAMILIES = {
+        drop2: {
+            label: 'Drop 2', forSevenths: true,
+            sets: [
+                { key: 'top',    label: 'D G B e', strings: [2,3,4,5] },
+                { key: 'middle', label: 'A D G B', strings: [1,2,3,4] },
+                { key: 'bottom', label: 'E A D G', strings: [0,1,2,3] },
+            ],
+            // Close position from the bass, 2nd voice from the top dropped an octave
+            shapes: () => [0,1,2,3].map(b => ({ order: [b, b+2, b+3, b+1].map(i => mod(i, 4)) })),
+        },
+        drop3: {
+            label: 'Drop 3', forSevenths: true,
+            sets: [
+                { key: 'six',  label: 'E · D G B', strings: [0,2,3,4] },
+                { key: 'five', label: 'A · G B e', strings: [1,3,4,5] },
+            ],
+            shapes: () => [0,1,2,3].map(b => ({ order: [b, b+3, b+1, b+2].map(i => mod(i, 4)) })),
+        },
+        shells: {
+            label: 'Shells', forSevenths: true,
+            sets: [
+                { key: 'six',  label: '6th-string root' },
+                { key: 'five', label: '5th-string root' },
+            ],
+            // Root, 3rd and 7th only; each set has a 3-on-top and a 7-on-top shape
+            shapes: (set) => set.key === 'six'
+                ? [ { name: 'R · 3 · 7', strings: [0,1,2], order: [0,1,3] },
+                    { name: 'R · 7 · 3', strings: [0,2,3], order: [0,3,1] } ]
+                : [ { name: 'R · 3 · 7', strings: [1,2,3], order: [0,1,3] },
+                    { name: 'R · 7 · 3', strings: [1,3,4], order: [0,3,1] } ],
+        },
+        triads: {
+            label: 'Triads', forSevenths: false,
+            sets: [
+                { key: 'gbe', label: 'G B e', strings: [3,4,5] },
+                { key: 'dgb', label: 'D G B', strings: [2,3,4] },
+                { key: 'adg', label: 'A D G', strings: [1,2,3] },
+                { key: 'ead', label: 'E A D', strings: [0,1,2] },
+            ],
+            shapes: () => [0,1,2].map(b => ({ order: [b, b+1, b+2].map(i => mod(i, 3)) })),
+        },
+    };
+    const INVERSION_NAMES = ['Root position', '1st inversion', '2nd inversion', '3rd inversion'];
+
+    // ── Find the lowest playable fingering for one shape ─────────────────
+    // Searches frets 1–16 on each string for the requested chord tone, keeping
+    // pitches strictly ascending in the given order and the fretted span within
+    // a hand's reach. Returns the lowest-positioned option.
+    const MAX_FRET = 16;
+    function findFingering(strings, pcs) {
+        let best = null;
+        function walk(i, frets, prevPitch) {
+            if (i === strings.length) {
+                const lo = Math.min(...frets), hi = Math.max(...frets);
+                if (hi - lo > 4) return;
+                const pitchSpan = OPEN_MIDI[strings[strings.length - 1]] + frets[frets.length - 1] - (OPEN_MIDI[strings[0]] + frets[0]);
+                if (!best || lo < best.lo || (lo === best.lo && pitchSpan < best.pitchSpan)) {
+                    best = { frets: frets.slice(), lo, hi, pitchSpan };
+                }
+                return;
+            }
+            const s = strings[i];
+            for (let f = 1; f <= MAX_FRET; f++) {
+                const pitch = OPEN_MIDI[s] + f;
+                if (mod(pitch, 12) !== pcs[i] || pitch <= prevPitch) continue;
+                if (frets.length && (Math.abs(f - frets[0]) > 4)) continue;
+                frets.push(f);
+                walk(i + 1, frets, pitch);
+                frets.pop();
+            }
+        }
+        walk(0, [], -1);
+        return best;
+    }
+
+    // Every shape for the current root/quality/family/set, sorted up the neck
+    function buildShapes() {
+        const q = QUALITIES[state.quality];
+        const fam = FAMILIES[state.family];
+        const set = fam.sets.find(s => s.key === state.set) || fam.sets[0];
+        return fam.shapes(set).map(sh => {
+            const strings = sh.strings || set.strings;
+            const pcs = sh.order.map(i => mod(state.root + q.tones[i], 12));
+            const fing = findFingering(strings, pcs);
+            if (!fing) return null;
+            return {
+                name: sh.name || INVERSION_NAMES[sh.order[0]],
+                strings,
+                order: sh.order,
+                frets: fing.frets,
+                lo: fing.lo,
+                hi: fing.hi,
+                midi: strings.map((s, i) => OPEN_MIDI[s] + fing.frets[i]),
+            };
+        }).filter(Boolean).sort((a, b) => a.lo - b.lo || a.midi[0] - b.midi[0]);
+    }
+
+    // ── State ────────────────────────────────────────────────────────────
+    const state = { root: 0, quality: 'maj7', family: 'drop2', set: 'middle', showDegrees: true, useFlats: true, selected: 0 };
+    let shapes = [];
+
+    // ── DOM refs ─────────────────────────────────────────────────────────
+    const noteGridEl = document.getElementById('noteGrid');
+    const qualitySeventhsEl = document.getElementById('qualitySevenths');
+    const qualityTriadsEl = document.getElementById('qualityTriads');
+    const familyGridEl = document.getElementById('familyGrid');
+    const setGridEl = document.getElementById('setGrid');
+    const showDegreesEl = document.getElementById('showDegrees');
+    const useFlatsEl = document.getElementById('useFlats');
+    const shapesEl = document.getElementById('shapes');
+    const svgEl = document.getElementById('fretboard');
+
+    function names() { return state.useFlats ? NOTE_FLAT : NOTE_SHARP; }
+    function isTriad() { return TRIAD_KEYS.includes(state.quality); }
+
+    function makeBtn(label, active, onClick) {
+        const btn = document.createElement('button');
+        btn.className = 'note-btn' + (active ? ' active' : '');
+        btn.textContent = label;
+        btn.addEventListener('click', onClick);
+        return btn;
+    }
+
+    // ── Controls ─────────────────────────────────────────────────────────
+    function buildControls() {
+        noteGridEl.innerHTML = '';
+        names().forEach((name, pc) => {
+            noteGridEl.appendChild(makeBtn(name, pc === state.root, () => { state.root = pc; update(); }));
+        });
+
+        qualitySeventhsEl.innerHTML = '';
+        SEVENTH_KEYS.forEach(k => qualitySeventhsEl.appendChild(
+            makeBtn(QUALITIES[k].label, k === state.quality, () => setQuality(k))));
+        qualityTriadsEl.innerHTML = '';
+        TRIAD_KEYS.forEach(k => qualityTriadsEl.appendChild(
+            makeBtn(QUALITIES[k].label, k === state.quality, () => setQuality(k))));
+
+        familyGridEl.innerHTML = '';
+        Object.entries(FAMILIES)
+            .filter(([, f]) => f.forSevenths !== isTriad())
+            .forEach(([k, f]) => familyGridEl.appendChild(
+                makeBtn(f.label, k === state.family, () => setFamily(k))));
+
+        setGridEl.innerHTML = '';
+        FAMILIES[state.family].sets.forEach(s => setGridEl.appendChild(
+            makeBtn(s.label, s.key === state.set, () => { state.set = s.key; state.selected = 0; update(); })));
+    }
+
+    function setQuality(k) {
+        const wasTriad = isTriad();
+        state.quality = k;
+        if (isTriad() !== wasTriad) setFamily(isTriad() ? 'triads' : 'drop2', true);
+        update();
+    }
+    function setFamily(k, silent) {
+        state.family = k;
+        const sets = FAMILIES[k].sets;
+        state.set = (sets.find(s => s.key === 'middle') || sets[0]).key;
+        state.selected = 0;
+        if (!silent) update();
+    }
+
+    showDegreesEl.addEventListener('change', () => { state.showDegrees = showDegreesEl.checked; update(); });
+    useFlatsEl.addEventListener('change', () => { state.useFlats = useFlatsEl.checked; update(); });
+
+    function toneLabel(toneIdx) {
+        const q = QUALITIES[state.quality];
+        return state.showDegrees ? q.degrees[toneIdx] : names()[mod(state.root + q.tones[toneIdx], 12)];
+    }
+
+    // ── Chord box diagram ────────────────────────────────────────────────
+    function diagramSvg(shape) {
+        const SW = 20, FH = 24, LEFT = 30, TOP = 22, ROWS = 5, R = 8.5;
+        const width = LEFT + SW * 5 + 14, height = TOP + FH * ROWS + 6;
+        const start = shape.hi <= 5 ? 1 : shape.lo;
+        let s = '';
+        for (let i = 0; i < 6; i++) {
+            const x = LEFT + i * SW;
+            s += `<line x1="${x}" y1="${TOP}" x2="${x}" y2="${TOP + FH * ROWS}" stroke="var(--ink-light)" stroke-width="1"/>`;
+        }
+        for (let r = 0; r <= ROWS; r++) {
+            const y = TOP + r * FH;
+            const nut = r === 0 && start === 1;
+            s += `<line x1="${LEFT}" y1="${y}" x2="${LEFT + SW * 5}" y2="${y}" stroke="var(--ink)" stroke-width="${nut ? 4 : 1}"/>`;
+        }
+        if (start > 1) {
+            s += `<text x="${LEFT - R - 4}" y="${TOP + FH / 2 + 4}" text-anchor="end" font-size="10" font-weight="700" fill="var(--amber)">${start}</text>`;
+        }
+        for (let i = 0; i < 6; i++) {
+            if (!shape.strings.includes(i)) {
+                const x = LEFT + i * SW, y = TOP - 10;
+                s += `<path d="M${x - 3.5} ${y - 3.5} L${x + 3.5} ${y + 3.5} M${x + 3.5} ${y - 3.5} L${x - 3.5} ${y + 3.5}" stroke="var(--ink-muted)" stroke-width="1.3"/>`;
+            }
+        }
+        shape.strings.forEach((str, i) => {
+            const x = LEFT + str * SW;
+            const y = TOP + (shape.frets[i] - start + 0.5) * FH;
+            const isRoot = shape.order[i] === 0;
+            s += `<circle cx="${x}" cy="${y}" r="${R}" fill="${isRoot ? 'var(--amber)' : 'var(--ink)'}"/>`;
+            s += `<text x="${x}" y="${y + 3}" text-anchor="middle" font-size="7.5" font-weight="700" fill="var(--paper)">${toneLabel(shape.order[i])}</text>`;
+        });
+        return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">${s}</svg>`;
+    }
+
+    function renderShapes() {
+        shapesEl.innerHTML = '';
+        shapes.forEach((sh, idx) => {
+            const btn = document.createElement('button');
+            btn.className = 'shape' + (idx === state.selected ? ' active' : '');
+            const bassToTop = sh.order.map(toneLabel).join(' · ');
+            btn.innerHTML = `<div class="shape-name">${sh.name}</div>${diagramSvg(sh)}<div class="shape-tones">${bassToTop}</div>`;
+            btn.addEventListener('click', () => {
+                state.selected = idx;
+                renderShapes();
+                renderNeck();
+                strum(sh.midi);
+            });
+            shapesEl.appendChild(btn);
+        });
+    }
+
+    // ── Full neck ────────────────────────────────────────────────────────
+    const NECK_FRETS = 17;
+    const MARKER_FRETS = [3,5,7,9,12,15,17];
+    const N_LEFT = 22, N_OPEN = 18, N_FRET = 42, N_TOP = 16, N_GAP = 26, N_BOT = 44, N_R = 10;
+    const STRING_W = [3.2, 2.6, 2, 1.6, 1.2, 1];
+
+    function renderNeck() {
+        const xNut = N_LEFT + N_OPEN;
+        const width = xNut + NECK_FRETS * N_FRET + 12;
+        const height = N_TOP + N_GAP * 5 + N_BOT;
+        // Tab orientation: high e on top, so string index i sits on row 5 - i
+        const y = i => N_TOP + (5 - i) * N_GAP;
+        const cx = f => xNut + (f - 0.5) * N_FRET;
+        let s = '';
+        for (let i = 0; i < 6; i++) {
+            s += `<line x1="${N_LEFT}" y1="${y(i)}" x2="${xNut + NECK_FRETS * N_FRET}" y2="${y(i)}" stroke="var(--ink-light)" stroke-width="${STRING_W[i]}" stroke-linecap="round"/>`;
+            s += `<text x="${N_LEFT - 6}" y="${y(i) + 4}" text-anchor="end" font-size="11" font-style="italic" fill="var(--ink-muted)">${STRING_NAMES[i]}</text>`;
+        }
+        for (let f = 1; f <= NECK_FRETS; f++) {
+            const x = xNut + f * N_FRET;
+            s += `<line x1="${x}" y1="${N_TOP - 6}" x2="${x}" y2="${N_TOP + 5 * N_GAP + 6}" stroke="var(--border)" stroke-width="1.5"/>`;
+            const isMarker = MARKER_FRETS.includes(f);
+            s += `<text x="${cx(f)}" y="${height - 8}" text-anchor="middle" font-size="8.5" fill="${isMarker ? 'var(--amber)' : 'var(--ink-muted)'}" font-weight="${isMarker ? 700 : 400}">${f}</text>`;
+        }
+        s += `<line x1="${xNut}" y1="${N_TOP - 10}" x2="${xNut}" y2="${N_TOP + 5 * N_GAP + 10}" stroke="var(--ink)" stroke-width="5"/>`;
+        const markY = N_TOP + 5 * N_GAP + 14;
+        MARKER_FRETS.forEach(f => {
+            if (f % 12 === 0) {
+                s += `<circle cx="${cx(f)}" cy="${markY - 7}" r="2.5" fill="var(--border)"/><circle cx="${cx(f)}" cy="${markY + 7}" r="2.5" fill="var(--border)"/>`;
+            } else {
+                s += `<circle cx="${cx(f)}" cy="${markY}" r="2.5" fill="var(--border)"/>`;
+            }
+        });
+
+        // Other shapes first (ghosted), then the selected one on top
+        const draw = (sh, ghost) => sh.strings.forEach((str, i) => {
+            const x = cx(sh.frets[i]), yy = y(str);
+            const isRoot = sh.order[i] === 0;
+            if (ghost) {
+                s += `<circle cx="${x}" cy="${yy}" r="${N_R}" fill="var(--paper)" stroke="var(--border)" stroke-width="1.2" stroke-dasharray="2.5 2"/>`;
+                s += `<text x="${x}" y="${yy + 3.2}" text-anchor="middle" font-size="8.5" fill="var(--ink-muted)">${toneLabel(sh.order[i])}</text>`;
+            } else {
+                s += `<circle cx="${x}" cy="${yy}" r="${N_R}" fill="${isRoot ? 'var(--amber)' : 'var(--paper)'}" stroke="var(--ink)" stroke-width="${isRoot ? 1.6 : 1.3}"/>`;
+                s += `<text x="${x}" y="${yy + 3.2}" text-anchor="middle" font-size="8.5" font-weight="700" fill="var(--ink)">${toneLabel(sh.order[i])}</text>`;
+            }
+        });
+        shapes.forEach((sh, idx) => { if (idx !== state.selected) draw(sh, true); });
+        if (shapes[state.selected]) draw(shapes[state.selected], false);
+
+        svgEl.setAttribute('viewBox', `0 0 ${width} ${height}`);
+        svgEl.setAttribute('width', width);
+        svgEl.setAttribute('height', height);
+        svgEl.innerHTML = s;
+    }
+
+    function renderTitle() {
+        const q = QUALITIES[state.quality];
+        const fam = FAMILIES[state.family];
+        const set = fam.sets.find(s => s.key === state.set) || fam.sets[0];
+        document.getElementById('chordTitle').textContent = names()[state.root] + q.sym;
+        document.getElementById('chordSub').textContent = `${fam.label} · ${set.label}`;
+        document.getElementById('chordNotes').innerHTML = q.tones.map((iv, i) => {
+            const n = names()[mod(state.root + iv, 12)];
+            return i === 0 ? `<span class="root-note">${n}</span>` : n;
+        }).join(' &middot; ');
+    }
+
+    function update() {
+        shapes = buildShapes();
+        if (state.selected >= shapes.length) state.selected = 0;
+        buildControls();
+        renderTitle();
+        renderShapes();
+        renderNeck();
+        prefetchSamples(shapes.flatMap(sh => sh.midi));
+    }
+
+    // ── Sound: jazz guitar samples, plucked-string synth as a fallback ─────
+    // FatBoy soundfont's archtop jazz guitar via gleitz/midi-js-soundfonts:
+    // one file per note, so nothing is pitch-shifted. Files are fetched as soon
+    // as a chord's shapes are on screen, then decoded on the first tap.
+    const SAMPLE_NOTE_NAMES = ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
+    const sampleUrl = m => `https://gleitz.github.io/midi-js-soundfonts/FatBoy/electric_guitar_jazz-mp3/${SAMPLE_NOTE_NAMES[m % 12]}${Math.floor(m / 12) - 1}.mp3`;
+    const sampleBytes = {};   // midi -> Promise<ArrayBuffer>
+    const sampleBuffers = {}; // midi -> Promise<AudioBuffer>
+    function prefetchSamples(midis) {
+        midis.forEach(m => {
+            if (sampleBytes[m]) return;
+            sampleBytes[m] = fetch(sampleUrl(m)).then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); });
+            sampleBytes[m].catch(() => {}); // a failed prefetch just falls back to the synth on tap
+        });
+    }
+    function sampleBuffer(m) {
+        prefetchSamples([m]);
+        if (!sampleBuffers[m]) {
+            // decodeAudioData detaches its input, so decode a copy and keep the bytes reusable
+            sampleBuffers[m] = sampleBytes[m].then(b => audioCtx.decodeAudioData(b.slice(0)));
+            sampleBuffers[m].catch(() => { delete sampleBuffers[m]; delete sampleBytes[m]; });
+        }
+        return sampleBuffers[m];
+    }
+
+    let audioCtx = null, dry = null, wet = null;
+    function ensureAudio() {
+        if (audioCtx) return;
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const out = audioCtx.createGain();
+        out.gain.value = 0.8;
+        out.connect(audioCtx.destination);
+        dry = audioCtx.createGain();
+        dry.connect(out);
+        // A light room, generated rather than loaded
+        const verb = audioCtx.createConvolver();
+        const len = Math.floor(audioCtx.sampleRate * 1.6);
+        const ir = audioCtx.createBuffer(2, len, audioCtx.sampleRate);
+        for (let c = 0; c < 2; c++) {
+            const d = ir.getChannelData(c);
+            for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.5);
+        }
+        verb.buffer = ir;
+        wet = audioCtx.createGain();
+        wet.gain.value = 0.18;
+        wet.connect(verb);
+        verb.connect(out);
+    }
+
+    // Only used if a sample can't be loaded (offline, CDN down)
+    const pluckCache = {};
+    function pluckBuffer(midi) {
+        if (pluckCache[midi]) return pluckCache[midi];
+        const sr = audioCtx.sampleRate;
+        const freq = 440 * Math.pow(2, (midi - 69) / 12);
+        const period = Math.round(sr / freq);
+        const len = Math.floor(sr * 2.6);
+        const buf = audioCtx.createBuffer(1, len, sr);
+        const out = buf.getChannelData(0);
+        const ring = new Float32Array(period);
+        for (let i = 0; i < period; i++) ring[i] = Math.random() * 2 - 1;
+        const decay = 0.994 + Math.min(0.005, (72 - midi) * 0.00012);
+        let idx = 0;
+        for (let i = 0; i < len; i++) {
+            const next = (idx + 1) % period;
+            const v = ring[idx];
+            ring[idx] = decay * 0.5 * (v + ring[next]);
+            out[i] = v * 0.5;
+            idx = next;
+        }
+        return (pluckCache[midi] = buf);
+    }
+
+    let strumId = 0;
+    async function strum(midis) {
+        ensureAudio();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const id = ++strumId;
+        const buffers = await Promise.all(midis.map(m => sampleBuffer(m).catch(() => pluckBuffer(m))));
+        if (id !== strumId) return; // a newer tap arrived while these were loading
+        const t0 = audioCtx.currentTime + 0.02, DUR = 2.6;
+        buffers.forEach((buf, i) => {
+            const when = t0 + i * 0.035;
+            const src = audioCtx.createBufferSource();
+            src.buffer = buf;
+            const g = audioCtx.createGain();
+            g.gain.setValueAtTime(0.55, when);
+            g.gain.setValueAtTime(0.55, when + DUR - 0.12);
+            g.gain.linearRampToValueAtTime(0, when + DUR);
+            src.connect(g);
+            g.connect(dry);
+            g.connect(wet);
+            src.start(when);
+            src.stop(when + DUR + 0.05);
+        });
+    }
+
+    // ── URL params (for linking from a generated session step) ───────────
+    // ?root=Bb&quality=min7&voicing=drop2&strings=middle
+    (function applyUrlParams() {
+        const params = new URLSearchParams(window.location.search);
+        const rootParam = params.get('root');
+        if (rootParam) {
+            const pc = LETTER_PC[rootParam[0].toUpperCase()];
+            if (pc !== undefined) {
+                const acc = rootParam.slice(1);
+                state.root = mod(pc + (acc === '#' ? 1 : 0) - (acc === 'b' ? 1 : 0), 12);
+                if (acc === '#') state.useFlats = false;
+            }
+        }
+        const q = params.get('quality');
+        if (q && QUALITIES[q]) state.quality = q;
+        const v = params.get('voicing');
+        const familyOk = v && FAMILIES[v] && FAMILIES[v].forSevenths !== isTriad();
+        setFamily(familyOk ? v : (isTriad() ? 'triads' : 'drop2'), true);
+        const st = params.get('strings');
+        if (st && FAMILIES[state.family].sets.some(s => s.key === st)) state.set = st;
+        showDegreesEl.checked = state.showDegrees;
+        useFlatsEl.checked = state.useFlats;
+    })();
+
+    // ── Init ─────────────────────────────────────────────────────────────
+    update();
+    (function () {
+        if (window.parent === window) return;
+        function reportHeight() {
+            window.parent.postMessage({ type: 'practiceLabToolHeight', height: document.documentElement.scrollHeight }, '*');
+        }
+        window.addEventListener('load', reportHeight);
+        window.addEventListener('resize', reportHeight);
+        document.addEventListener('click', () => setTimeout(reportHeight, 60));
+        document.addEventListener('change', () => setTimeout(reportHeight, 60));
+        setTimeout(reportHeight, 150);
+        setTimeout(reportHeight, 600);
+    })();
+</script>
+<!-- Cloudflare Web Analytics --><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "b3be0e40b4e545519ebbff691359e051"}'></script><!-- End Cloudflare Web Analytics -->
+</body>
+</html>
